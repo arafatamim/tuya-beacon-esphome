@@ -1,0 +1,72 @@
+# Example ESPHome config: control a Tuya Beacon RGBCW bulb from Home Assistant.
+#
+# Prerequisites:
+#   1. Extract your bulb's localKey — see ../frida/README.md
+#   2. Note the controller name (your phone's BT name at pairing) and bulb MAC
+#   3. cp secrets.example.yaml secrets.yaml  and fill it in
+#   4. esphome compile home-gateway.example.yaml
+#      esphome upload  home-gateway.example.yaml --device COM_PORT
+#      (or --device IP_ADDRESS for OTA after the first flash)
+#
+# Classic ESP32 (esp32dev). The Arduino framework is used here because some
+# routers reject the newer ESP-IDF WiFi stack; esp-idf works fine otherwise.
+
+esphome:
+  name: home-gateway
+  friendly_name: Home Gateway
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+external_components:
+  - source:
+      type: local
+      path: components
+
+# BLE stack — required by the tuya_beacon component.
+esp32_ble:
+
+# BLE scanner — feeds status beacons to the component for counter self-seeding.
+# Throttled to ~10% duty so advertising (control commands) gets the radio.
+esp32_ble_tracker:
+  scan_parameters:
+    active: false
+    interval: 600ms
+    window: 60ms
+
+# One block per bulb. MULTI_CONF — add as many as you like.
+tuya_beacon:
+  - id: my_bulb
+    local_key: !secret bulb_local_key          # 16 ASCII chars, rotates on re-pair
+    controller_name: !secret bulb_controller_name  # BT name used at pairing, ≤8 chars
+    mac_address: !secret bulb_mac_address
+    initial_seq: !secret bulb_initial_seq      # run gen_vector.py / status_seed.py to get this
+
+# Full RGBCW light in Home Assistant.
+light:
+  - platform: tuya_beacon
+    tuya_beacon_id: my_bulb
+    name: "Bedroom Light"
+    default_transition_length: 0s
+
+# Native API for Home Assistant (encrypted).
+api:
+  encryption:
+    key: !secret api_key
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  power_save_mode: none
+  ap:
+    ssid: "Gateway Fallback"
+    password: !secret ota_password
+
+captive_portal:
+logger:

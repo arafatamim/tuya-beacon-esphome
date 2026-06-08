@@ -1,0 +1,42 @@
+# --- Secrets / device-specific (NEVER commit) ---
+# localKeys, mesh creds, extracted app data, captures with MACs
+*.localkey
+secrets.*
+# the template IS committed (placeholders only):
+!secrets.example.yaml
+*_prefs.xml
+preferences_*.xml
+
+# --- ESPHome build output ---
+esphome/.esphome/
+esphome/secrets.yaml
+
+# --- Big binaries that don't belong in git ---
+*.apk
+*.xapk
+*.ab
+frida-server*
+*.xz
+
+# --- Python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# --- Android / Gradle ---
+android/**/build/
+android/**/.gradle/
+android/**/local.properties
+android/**/.idea/
+android/**/*.iml
+android/**/.cxx/
+
+# --- Node (frida-compile) ---
+node_modules/
+package-lock.json
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*.log
