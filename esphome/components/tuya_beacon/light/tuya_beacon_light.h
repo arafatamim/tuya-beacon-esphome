@@ -25,9 +25,11 @@ class TuyaBeaconLight : public Component, public light::LightOutput {
   void set_beacon(TuyaBeacon *beacon) { beacon_ = beacon; }
   void set_cold_white_temperature(float t) { cold_mireds_ = t; }
   void set_warm_white_temperature(float t) { warm_mireds_ = t; }
+  void set_resync_interval(uint32_t ms) { resync_interval_ = ms; }
 
   // ----- ESPHome lifecycle -----
   float get_setup_priority() const override { return setup_priority::DATA; }
+  void setup() override;
   void dump_config() override;
 
   // ----- LightOutput interface -----
@@ -37,7 +39,17 @@ class TuyaBeaconLight : public Component, public light::LightOutput {
  protected:
   static constexpr const char *const TAG = "tuya_beacon_light";
 
+  // Re-broadcast the cached current state to the bulb. Because the bulb never
+  // reports its real state, this is the only way to correct drift introduced
+  // by external changes (Tuya app, wall switch, power-cycle): periodically
+  // re-impose what Home Assistant believes the state is. Driven by a timer set
+  // up in setup() at resync_interval_ (0 disables).
+  void resync_();
+
   TuyaBeacon *beacon_{nullptr};
+
+  // How often to re-assert state onto the bulb, in ms (0 = never).
+  uint32_t resync_interval_{600000};
 
   // Color temperature endpoints in mireds, configurable via YAML.
   // Defaults match common RGBCW bulb specs (153 mireds ≈ 6500 K cool,

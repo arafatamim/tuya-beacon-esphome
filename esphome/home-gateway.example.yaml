@@ -50,6 +50,16 @@ light:
     tuya_beacon_id: my_bulb
     name: "Bedroom Light"
     default_transition_length: 0s
+    # Control is one-way: the bulb never reports its real state, so HA can drift
+    # out of sync after a power-cycle or an external change (Tuya app / wall
+    # switch). The two settings below keep the ESP authoritative.
+    #
+    # Re-assert HA's last on/off + brightness + colour from flash on boot, so an
+    # ESP reboot re-broadcasts every DP and restores the bulb to its last state.
+    restore_mode: RESTORE_DEFAULT_OFF
+    # Every 10 min, re-impose HA's cached state onto the bulb so external changes
+    # self-heal back into sync. Set to 0s to disable.
+    resync_interval: 10min
 
 # Native API for Home Assistant (encrypted).
 api:

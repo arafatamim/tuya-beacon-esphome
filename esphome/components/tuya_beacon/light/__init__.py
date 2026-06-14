@@ -21,6 +21,7 @@ TuyaBeaconLight = tuya_beacon_ns.class_(
 
 CONF_COLD_WHITE_COLOR_TEMPERATURE = "cold_white_color_temperature"
 CONF_WARM_WHITE_COLOR_TEMPERATURE = "warm_white_color_temperature"
+CONF_RESYNC_INTERVAL = "resync_interval"
 
 CONFIG_SCHEMA = (
     light.RGB_LIGHT_SCHEMA.extend(
@@ -32,6 +33,11 @@ CONFIG_SCHEMA = (
             cv.Optional(
                 CONF_WARM_WHITE_COLOR_TEMPERATURE, default="500 mireds"
             ): cv.color_temperature,
+            # The bulb never reports its real state, so we periodically re-impose
+            # HA's state to correct external drift. "0s" disables it.
+            cv.Optional(
+                CONF_RESYNC_INTERVAL, default="10min"
+            ): cv.positive_time_period_milliseconds,
         }
     )
     .extend(TUYA_BEACON_SCHEMA)
@@ -48,3 +54,4 @@ async def to_code(config):
     cg.add(var.set_beacon(beacon))
     cg.add(var.set_cold_white_temperature(config[CONF_COLD_WHITE_COLOR_TEMPERATURE]))
     cg.add(var.set_warm_white_temperature(config[CONF_WARM_WHITE_COLOR_TEMPERATURE]))
+    cg.add(var.set_resync_interval(config[CONF_RESYNC_INTERVAL]))

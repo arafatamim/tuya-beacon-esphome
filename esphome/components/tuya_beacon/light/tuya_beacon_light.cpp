@@ -4,10 +4,46 @@
 namespace esphome {
 namespace tuya_beacon {
 
+void TuyaBeaconLight::setup() {
+  // Schedule the periodic state re-assert. The bulb does not broadcast its real
+  // state, so this self-heals any external drift by re-imposing HA's state.
+  if (resync_interval_ > 0)
+    this->set_interval("resync", resync_interval_, [this]() { this->resync_(); });
+}
+
 void TuyaBeaconLight::dump_config() {
   ESP_LOGCONFIG(TAG, "Tuya Beacon Light:");
   ESP_LOGCONFIG(TAG, "  Cold white: %.0f mireds", cold_mireds_);
   ESP_LOGCONFIG(TAG, "  Warm white: %.0f mireds", warm_mireds_);
+  if (resync_interval_ > 0)
+    ESP_LOGCONFIG(TAG, "  Resync interval: %u ms", resync_interval_);
+  else
+    ESP_LOGCONFIG(TAG, "  Resync interval: disabled");
+}
+
+// Re-broadcast the cached current state. Uses the same delta-tracked values
+// that write_state() maintains, so it mirrors exactly what HA last applied.
+// Sends are unconditional here — the whole point is to re-impose state even
+// when nothing changed, so it does not consult the last_* delta trackers.
+void TuyaBeaconLight::resync_() {
+  if (!have_last_)
+    return;  // nothing applied yet — nothing to re-assert
+
+  ESP_LOGD(TAG, "Periodic resync: re-asserting state to bulb");
+
+  if (!last_on_) {
+    beacon_->send_on_off(false);
+    return;
+  }
+
+  beacon_->send_on_off(true);
+  beacon_->send_mode(last_mode_);
+  if (last_mode_ == 1) {
+    beacon_->send_color_hsv(last_hue_, last_sat_, last_val_);
+  } else {
+    beacon_->send_brightness(last_bright_);
+    beacon_->send_color_temp(last_temp_);
+  }
 }
 
 light::LightTraits TuyaBeaconLight::get_traits() {
